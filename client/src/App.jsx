@@ -1,53 +1,11 @@
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { Button, Space } from 'antd'
+import { LogoutOutlined, EditOutlined } from '@ant-design/icons'
 import Login from './pages/Login'
 import Articles from './pages/Articles'
 import ArticleEdit from './pages/ArticleEdit'
 import PrivateRoute from './components/PrivateRoute'
 import { useAuth } from './context/useAuth'
-
-const navStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '20px',
-  padding: '0 40px',
-  height: '60px',
-  backgroundColor: '#fff',
-  borderBottom: '1px solid #eee'
-}
-
-const logoStyle = {
-  fontWeight: 'bold',
-  fontSize: '20px',
-  color: '#333',
-  textDecoration: 'none',
-  marginRight: 'auto'
-}
-
-const linkStyle = {
-  color: '#666',
-  textDecoration: 'none'
-}
-
-const userStyle = {
-  fontSize: '14px',
-  color: '#333'
-}
-
-const logoutBtnStyle = {
-  padding: '6px 12px',
-  backgroundColor: '#fff',
-  color: '#666',
-  border: '1px solid #ddd',
-  borderRadius: '4px',
-  fontSize: '13px',
-  cursor: 'pointer'
-}
-
-const mainStyle = {
-  maxWidth: '800px',
-  margin: '20px auto',
-  padding: '0 20px'
-}
 
 function NavBar() {
   const { isLoggedIn, username, logout } = useAuth()
@@ -59,20 +17,37 @@ function NavBar() {
   }
 
   return (
-    <nav style={navStyle}>
-      <Link to="/" style={logoStyle}>博客系统</Link>
-      <Link to="/articles" style={linkStyle}>文章列表</Link>
+    <nav className="h-16 bg-white border-b border-gray-200 px-10 flex items-center">
+      <Link to="/" className="text-xl font-bold text-gray-800 no-underline mr-auto">
+        博客系统
+      </Link>
 
-      {isLoggedIn ? (
-        <>
-          <span style={userStyle}>{username}</span>
-          <button style={logoutBtnStyle} onClick={handleLogout}>
-            退出登录
-          </button>
-        </>
-      ) : (
-        <Link to="/login" style={linkStyle}>登录</Link>
-      )}
+      <Space size="middle">
+        <Link to="/articles" className="text-gray-600 no-underline hover:text-blue-500">
+          文章列表
+        </Link>
+
+        {isLoggedIn ? (
+          <>
+            <Link to="/articles/new" className="text-gray-600 no-underline hover:text-blue-500">
+              <EditOutlined className="mr-1" />
+              写文章
+            </Link>
+            <span className="text-gray-800 text-sm">{username}</span>
+            <Button
+              size="small"
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+            >
+              退出
+            </Button>
+          </>
+        ) : (
+          <Link to="/login">
+            <Button type="primary" size="small">登录</Button>
+          </Link>
+        )}
+      </Space>
     </nav>
   )
 }
@@ -80,32 +55,27 @@ function NavBar() {
 function App() {
   return (
     <BrowserRouter>
-      <div>
+      <div className="min-h-screen bg-gray-50">
         <NavBar />
 
-        <div style={mainStyle}>
+        <main className="max-w-4xl mx-auto py-6 px-5">
           <Routes>
-            <Route path="/" element={<div>首页 - 欢迎来到博客系统</div>} />
+            <Route path="/" element={
+              <div className="bg-white rounded-lg shadow-sm p-10 text-center">
+                <h1 className="text-3xl font-bold text-gray-800 mb-3">欢迎来到博客系统</h1>
+                <p className="text-gray-500">一个使用 React + Node.js 构建的全栈应用</p>
+              </div>
+            } />
             <Route path="/articles" element={<Articles />} />
-            <Route
-              path="/articles/new"
-              element={
-                <PrivateRoute>
-                  <ArticleEdit />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/articles/edit/:id"
-              element={
-                <PrivateRoute>
-                  <ArticleEdit />
-                </PrivateRoute>
-              }
-            />
+            <Route path="/articles/new" element={
+              <PrivateRoute><ArticleEdit /></PrivateRoute>
+            } />
+            <Route path="/articles/edit/:id" element={
+              <PrivateRoute><ArticleEdit /></PrivateRoute>
+            } />
             <Route path="/login" element={<Login />} />
           </Routes>
-        </div>
+        </main>
       </div>
     </BrowserRouter>
   )
