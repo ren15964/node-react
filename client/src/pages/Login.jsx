@@ -35,24 +35,16 @@ function Login() {
 
   return (
     <div className="flex justify-center pt-20">
-      <Card className="w-96 shadow-md" title={
-        <div className="text-center text-xl">{isRegister ? '注册' : '登录'}</div>
-      }>
+      <Card
+        className="w-96 shadow-md"
+        title={<div className="text-center text-xl">{isRegister ? '注册' : '登录'}</div>}
+      >
         <Form onFinish={handleSubmit} size="large">
-          <Form.Item
-            name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
-          >
-            <Input
-              prefix={<UserOutlined className="text-gray-400" />}
-              placeholder="用户名"
-            />
+          <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+            <Input prefix={<UserOutlined className="text-gray-400" />} placeholder="用户名" />
           </Form.Item>
 
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: '请输入密码' }]}
-          >
+          <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
             <Input.Password
               prefix={<LockOutlined className="text-gray-400" />}
               placeholder="密码"

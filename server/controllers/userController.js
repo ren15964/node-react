@@ -14,10 +14,7 @@ const register = asyncHandler(async (req, res) => {
     throw new AppError('用户名和密码不能为空')
   }
 
-  const [existing] = await pool.query(
-    'SELECT id FROM users WHERE username = ?',
-    [username]
-  )
+  const [existing] = await pool.query('SELECT id FROM users WHERE username = ?', [username])
 
   if (existing.length > 0) {
     throw new AppError('用户名已存在')
@@ -25,10 +22,10 @@ const register = asyncHandler(async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
-  const [result] = await pool.query(
-    'INSERT INTO users (username, password) VALUES (?, ?)',
-    [username, hashedPassword]
-  )
+  const [result] = await pool.query('INSERT INTO users (username, password) VALUES (?, ?)', [
+    username,
+    hashedPassword
+  ])
 
   success(res, { id: result.insertId, username }, '注册成功')
 })
@@ -41,10 +38,7 @@ const login = asyncHandler(async (req, res) => {
     throw new AppError('用户名和密码不能为空')
   }
 
-  const [rows] = await pool.query(
-    'SELECT * FROM users WHERE username = ?',
-    [username]
-  )
+  const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username])
 
   if (rows.length === 0) {
     throw new AppError('用户名或密码错误')
@@ -57,19 +51,21 @@ const login = asyncHandler(async (req, res) => {
     throw new AppError('用户名或密码错误')
   }
 
-  const token = jwt.sign(
-    { id: user.id, username: user.username },
-    config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
-  )
+  const token = jwt.sign({ id: user.id, username: user.username }, config.jwt.secret, {
+    expiresIn: config.jwt.expiresIn
+  })
 
-  success(res, {
-    token,
-    userInfo: {
-      id: user.id,
-      username: user.username
-    }
-  }, '登录成功')
+  success(
+    res,
+    {
+      token,
+      userInfo: {
+        id: user.id,
+        username: user.username
+      }
+    },
+    '登录成功'
+  )
 })
 
 module.exports = {

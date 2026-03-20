@@ -89,11 +89,7 @@ function Articles() {
       title: '创建时间',
       dataIndex: 'created_at',
       width: 180,
-      render: (text) => (
-        <Tag color="blue">
-          {new Date(text).toLocaleDateString('zh-CN')}
-        </Tag>
-      )
+      render: (text) => <Tag color="blue">{new Date(text).toLocaleDateString('zh-CN')}</Tag>
     },
     {
       title: '操作',

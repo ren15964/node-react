@@ -60,10 +60,10 @@ const createArticle = asyncHandler(async (req, res) => {
     throw new AppError('文章标题不能为空')
   }
 
-  const [result] = await pool.query(
-    'INSERT INTO articles (title, content) VALUES (?, ?)',
-    [title, content]
-  )
+  const [result] = await pool.query('INSERT INTO articles (title, content) VALUES (?, ?)', [
+    title,
+    content
+  ])
 
   success(res, { id: result.insertId }, '文章创建成功')
 })
@@ -77,10 +77,11 @@ const updateArticle = asyncHandler(async (req, res) => {
     throw new AppError('文章标题不能为空')
   }
 
-  const [result] = await pool.query(
-    'UPDATE articles SET title = ?, content = ? WHERE id = ?',
-    [title, content, id]
-  )
+  const [result] = await pool.query('UPDATE articles SET title = ?, content = ? WHERE id = ?', [
+    title,
+    content,
+    id
+  ])
 
   if (result.affectedRows === 0) {
     throw new AppError('文章不存在', 404)
@@ -93,10 +94,7 @@ const updateArticle = asyncHandler(async (req, res) => {
 const deleteArticle = asyncHandler(async (req, res) => {
   const { id } = req.params
 
-  const [result] = await pool.query(
-    'DELETE FROM articles WHERE id = ?',
-    [id]
-  )
+  const [result] = await pool.query('DELETE FROM articles WHERE id = ?', [id])
 
   if (result.affectedRows === 0) {
     throw new AppError('文章不存在', 404)

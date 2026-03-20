@@ -9,11 +9,15 @@ const uploadImage = asyncHandler(async (req, res) => {
 
   const fileUrl = '/uploads/' + req.file.filename
 
-  success(res, {
-    url: fileUrl,
-    filename: req.file.filename,
-    size: req.file.size
-  }, '上传成功')
+  success(
+    res,
+    {
+      url: fileUrl,
+      filename: req.file.filename,
+      size: req.file.size
+    },
+    '上传成功'
+  )
 })
 
 module.exports = {

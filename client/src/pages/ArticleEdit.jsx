@@ -58,14 +58,8 @@ function ArticleEdit() {
         返回列表
       </Button>
 
-      <Card title={
-        <span className="text-lg">{isEdit ? '编辑文章' : '发布文章'}</span>
-      }>
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-        >
+      <Card title={<span className="text-lg">{isEdit ? '编辑文章' : '发布文章'}</span>}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
             label="文章标题"
             name="title"
@@ -75,11 +69,7 @@ function ArticleEdit() {
           </Form.Item>
 
           <Form.Item label="文章内容" name="content">
-            <Input.TextArea
-              placeholder="请输入文章内容"
-              rows={12}
-              showCount
-            />
+            <Input.TextArea placeholder="请输入文章内容" rows={12} showCount />
           </Form.Item>
 
           <Form.Item>
@@ -87,9 +77,7 @@ function ArticleEdit() {
               <Button type="primary" htmlType="submit" loading={loading}>
                 {isEdit ? '保存修改' : '发布文章'}
               </Button>
-              <Button onClick={() => navigate('/articles')}>
-                取消
-              </Button>
+              <Button onClick={() => navigate('/articles')}>取消</Button>
             </Space>
           </Form.Item>
         </Form>
