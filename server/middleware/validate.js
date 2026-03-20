@@ -1,0 +1,22 @@
+const AppError = require('../utils/AppError')
+
+const validate = (schema, source = 'body') => {
+  return (req, res, next) => {
+    const data = req[source]
+
+    const { error, value } = schema.validate(data, {
+      abortEarly: false,
+      stripUnknown: true
+    })
+
+    if (error) {
+      const message = error.details.map((d) => d.message).join('; ')
+      throw new AppError(message, 400)
+    }
+
+    req[source] = value
+    next()
+  }
+}
+
+module.exports = validate
