@@ -3,6 +3,7 @@ import { Button, Space } from 'antd'
 import { LogoutOutlined, EditOutlined } from '@ant-design/icons'
 import Login from './pages/Login'
 import Articles from './pages/Articles'
+import ArticleDetail from './pages/ArticleDetail'
 import ArticleEdit from './pages/ArticleEdit'
 import Upload from './pages/Upload'
 import PrivateRoute from './components/PrivateRoute'
@@ -14,7 +15,7 @@ function NavBar() {
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   return (
@@ -72,6 +73,7 @@ function App() {
               }
             />
             <Route path="/articles" element={<Articles />} />
+            <Route path="/articles/:id" element={<ArticleDetail />} />
             <Route
               path="/articles/new"
               element={

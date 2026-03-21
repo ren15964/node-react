@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Table, Button, Space, Input, Popconfirm, message, Tag } from 'antd'
-import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Input, Popconfirm, message, Tag, Typography } from 'antd'
+import {
+  PlusOutlined,
+  SearchOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined
+} from '@ant-design/icons'
 import request from '../utils/request'
 import { useAuth } from '../context/useAuth'
 
@@ -15,14 +21,16 @@ function Articles() {
     total: 0
   })
   const navigate = useNavigate()
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, userInfo } = useAuth()
 
   const fetchArticles = async (page = 1, pageSize = 10, search = keyword) => {
     setLoading(true)
+
     try {
       const res = await request.get('/api/articles', {
         params: { page, pageSize, keyword: search }
       })
+
       setArticles(res.data.list)
       setPagination({
         current: res.data.pagination.page,
@@ -30,7 +38,7 @@ function Articles() {
         total: res.data.pagination.total
       })
     } catch (err) {
-      message.error('获取文章列表失败')
+      message.error(err.response?.data?.message || '获取文章列表失败')
     } finally {
       setLoading(false)
     }
@@ -68,12 +76,18 @@ function Articles() {
       title: '标题',
       dataIndex: 'title',
       render: (text, record) => (
-        <span
-          className="text-blue-500 cursor-pointer hover:underline"
-          onClick={() => navigate('/articles/edit/' + record.id)}
-        >
-          {text}
-        </span>
+        <Typography.Link onClick={() => navigate('/articles/' + record.id)}>{text}</Typography.Link>
+      )
+    },
+    {
+      title: '作者',
+      dataIndex: 'author_name',
+      width: 170,
+      render: (text, record) => (
+        <Space size="small">
+          <span>{text || '未知作者'}</span>
+          {userInfo?.id === record.author_id && <Tag color="green">我的文章</Tag>}
+        </Space>
       )
     },
     {
@@ -93,28 +107,46 @@ function Articles() {
     },
     {
       title: '操作',
-      width: 160,
-      render: (_, record) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => navigate('/articles/edit/' + record.id)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定删除这篇文章吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button size="small" danger icon={<DeleteOutlined />}>
-              删除
+      width: 220,
+      render: (_, record) => {
+        const isOwner = userInfo?.id === record.author_id
+
+        return (
+          <Space>
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => navigate('/articles/' + record.id)}
+            >
+              查看
             </Button>
-          </Popconfirm>
-        </Space>
-      )
+
+            {isOwner ? (
+              <>
+                <Button
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => navigate('/articles/edit/' + record.id)}
+                >
+                  编辑
+                </Button>
+                <Popconfirm
+                  title="确定删除这篇文章吗？"
+                  onConfirm={() => handleDelete(record.id)}
+                  okText="确定"
+                  cancelText="取消"
+                >
+                  <Button size="small" danger icon={<DeleteOutlined />}>
+                    删除
+                  </Button>
+                </Popconfirm>
+              </>
+            ) : (
+              <span className="text-gray-400 text-sm">仅作者可编辑</span>
+            )}
+          </Space>
+        )
+      }
     }
   ]
 

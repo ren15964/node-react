@@ -1,34 +1,46 @@
+const { success } = require('../utils/response')
+const asyncHandler = require('../utils/asyncHandler')
+const articleService = require('../services/articleService')
+
 const getArticles = asyncHandler(async (req, res) => {
-  const { page, pageSize, keyword } = req.query
-
-  const offset = (page - 1) * pageSize
-
-  let sql = 'SELECT * FROM articles WHERE deleted_at IS NULL'
-  let countSql = 'SELECT COUNT(*) as total FROM articles WHERE deleted_at IS NULL'
-  const params = []
-  const countParams = []
-
-  if (keyword) {
-    sql += ' AND title LIKE ?'
-    countSql += ' AND title LIKE ?'
-    params.push('%' + keyword + '%')
-    countParams.push('%' + keyword + '%')
-  }
-
-  sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
-  params.push(pageSize, offset)
-
-  const [rows] = await pool.query(sql, params)
-  const [countRows] = await pool.query(countSql, countParams)
-  const total = countRows[0].total
-
-  success(res, {
-    list: rows,
-    pagination: {
-      page,
-      pageSize,
-      total,
-      totalPages: Math.ceil(total / pageSize)
-    }
-  })
+  const articleList = await articleService.listArticles(req.query)
+  success(res, articleList)
 })
+
+const getArticleById = asyncHandler(async (req, res) => {
+  const article = await articleService.getArticleById(req.params.id)
+  success(res, article)
+})
+
+const createArticle = asyncHandler(async (req, res) => {
+  const createdArticle = await articleService.createArticle({
+    ...req.body,
+    authorId: req.user.id
+  })
+
+  success(res, createdArticle, '文章创建成功')
+})
+
+const updateArticle = asyncHandler(async (req, res) => {
+  await articleService.updateArticle(req.params.id, req.body, req.user.id)
+  success(res, null, '文章更新成功')
+})
+
+const deleteArticle = asyncHandler(async (req, res) => {
+  await articleService.deleteArticle(req.params.id, req.user.id)
+  success(res, null, '文章删除成功')
+})
+
+const restoreArticle = asyncHandler(async (req, res) => {
+  await articleService.restoreArticle(req.params.id, req.user.id)
+  success(res, null, '文章恢复成功')
+})
+
+module.exports = {
+  getArticles,
+  getArticleById,
+  createArticle,
+  updateArticle,
+  deleteArticle,
+  restoreArticle
+}

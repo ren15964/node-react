@@ -1,33 +1,81 @@
-import { createContext, useState } from 'react'
+import { createContext, useEffect, useState } from 'react'
+import { fetchCurrentUser } from '../api/user'
 
 export const AuthContext = createContext()
 
+const clearStoredAuth = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('username')
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
-  const [username, setUsername] = useState(localStorage.getItem('username') || '')
+  const [userInfo, setUserInfo] = useState(null)
+  const [isInitializing, setIsInitializing] = useState(Boolean(localStorage.getItem('token')))
 
-  const login = (newToken, newUsername) => {
+  useEffect(() => {
+    let isMounted = true
+
+    const initializeAuth = async () => {
+      if (!token) {
+        setIsInitializing(false)
+        return
+      }
+
+      setIsInitializing(true)
+
+      try {
+        const res = await fetchCurrentUser()
+
+        if (!isMounted) {
+          return
+        }
+
+        setUserInfo(res.data)
+        localStorage.setItem('username', res.data.username)
+      } catch (error) {
+        if (!isMounted) {
+          return
+        }
+
+        setToken('')
+        setUserInfo(null)
+        clearStoredAuth()
+      } finally {
+        if (isMounted) {
+          setIsInitializing(false)
+        }
+      }
+    }
+
+    initializeAuth()
+
+    return () => {
+      isMounted = false
+    }
+  }, [token])
+
+  const login = (newToken, newUserInfo) => {
     setToken(newToken)
-    setUsername(newUsername)
+    setUserInfo(newUserInfo)
     localStorage.setItem('token', newToken)
-    localStorage.setItem('username', newUsername)
+    localStorage.setItem('username', newUserInfo.username)
   }
 
   const logout = () => {
     setToken('')
-    setUsername('')
-    localStorage.removeItem('token')
-    localStorage.removeItem('username')
+    setUserInfo(null)
+    clearStoredAuth()
   }
 
-  const isLoggedIn = !!token
-
   const contextValue = {
-    token: token,
-    username: username,
-    isLoggedIn: isLoggedIn,
-    login: login,
-    logout: logout
+    token,
+    userInfo,
+    username: userInfo?.username || '',
+    isLoggedIn: !!token,
+    isInitializing,
+    login,
+    logout
   }
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>

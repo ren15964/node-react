@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Form, Input, Button, Card, Space, message } from 'antd'
+import { Form, Input, Button, Card, Space, message, Tag } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import request from '../utils/request'
+import { useAuth } from '../context/useAuth'
 
 function ArticleEdit() {
   const { id } = useParams()
@@ -10,26 +11,42 @@ function ArticleEdit() {
   const isEdit = !!id
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
+  const [articleMeta, setArticleMeta] = useState(null)
+  const { userInfo } = useAuth()
 
   useEffect(() => {
-    if (isEdit) {
-      const fetchArticle = async () => {
-        try {
-          const res = await request.get('/api/articles/' + id)
-          form.setFieldsValue({
-            title: res.data.title,
-            content: res.data.content || ''
-          })
-        } catch (err) {
-          message.error('加载文章失败')
-        }
-      }
-      fetchArticle()
+    if (!isEdit) {
+      return
     }
-  }, [id, isEdit, form])
+
+    const fetchArticle = async () => {
+      try {
+        const res = await request.get('/api/articles/' + id)
+        const article = res.data
+
+        if (userInfo && article.author_id !== userInfo.id) {
+          message.error('你只能编辑自己创建的文章')
+          navigate('/articles/' + id, { replace: true })
+          return
+        }
+
+        setArticleMeta(article)
+        form.setFieldsValue({
+          title: article.title,
+          content: article.content || ''
+        })
+      } catch (err) {
+        message.error(err.response?.data?.message || '加载文章失败')
+        navigate('/articles', { replace: true })
+      }
+    }
+
+    fetchArticle()
+  }, [form, id, isEdit, navigate, userInfo])
 
   const handleSubmit = async (values) => {
     setLoading(true)
+
     try {
       if (isEdit) {
         await request.put('/api/articles/' + id, values)
@@ -38,6 +55,7 @@ function ArticleEdit() {
         await request.post('/api/articles', values)
         message.success('文章发布成功')
       }
+
       navigate('/articles')
     } catch (err) {
       const msg = err.response?.data?.message || '操作失败'
@@ -52,13 +70,22 @@ function ArticleEdit() {
       <Button
         type="link"
         icon={<ArrowLeftOutlined />}
-        onClick={() => navigate('/articles')}
+        onClick={() => navigate(isEdit ? '/articles/' + id : '/articles')}
         className="mb-4 px-0 text-gray-500"
       >
-        返回列表
+        {isEdit ? '返回详情' : '返回列表'}
       </Button>
 
       <Card title={<span className="text-lg">{isEdit ? '编辑文章' : '发布文章'}</span>}>
+        {articleMeta && (
+          <Space className="mb-4" wrap>
+            <Tag color="blue">作者：{articleMeta.author_name || '未知作者'}</Tag>
+            <Tag color="default">
+              创建时间：{new Date(articleMeta.created_at).toLocaleString('zh-CN')}
+            </Tag>
+          </Space>
+        )}
+
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
             label="文章标题"
@@ -77,7 +104,9 @@ function ArticleEdit() {
               <Button type="primary" htmlType="submit" loading={loading}>
                 {isEdit ? '保存修改' : '发布文章'}
               </Button>
-              <Button onClick={() => navigate('/articles')}>取消</Button>
+              <Button onClick={() => navigate(isEdit ? '/articles/' + id : '/articles')}>
+                取消
+              </Button>
             </Space>
           </Form.Item>
         </Form>

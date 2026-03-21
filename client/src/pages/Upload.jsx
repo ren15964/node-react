@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Upload as AntUpload, Button, Card, message, Image, List } from 'antd'
-import { UploadOutlined, InboxOutlined } from '@ant-design/icons'
+import { Upload as AntUpload, Card, message, Image } from 'antd'
+import { InboxOutlined } from '@ant-design/icons'
 
 const BASE_URL = 'http://localhost:3000'
 
@@ -42,7 +42,7 @@ function Upload() {
           message.error(res.message || '上传失败')
         }
       } else if (info.file.status === 'error') {
-        message.error('上传失败')
+        message.error(info.file.response?.message || '上传失败')
       }
     }
   }

@@ -1,10 +1,16 @@
 {
   "name": "fullstack-blog",
   "version": "1.0.0",
-  "description": "",
+  "description": "用于学习 React + Node.js 的全栈博客项目",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently -k -n server,client -c yellow,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "start": "npm run start --prefix server",
+    "build": "npm run build --prefix client",
+    "lint": "npm run lint --prefix client",
+    "test": "echo \"Tests are not set up yet\" && exit 1",
     "format": "prettier --write \"client/src/**/*.{js,jsx,css}\" \"server/**/*.js\"",
     "format:check": "prettier --check \"client/src/**/*.{js,jsx,css}\" \"server/**/*.js\""
   },
@@ -13,6 +19,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "prettier": "^3.8.1"
   }
 }

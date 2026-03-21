@@ -1,23 +1,18 @@
 const jwt = require('jsonwebtoken')
 const config = require('../config')
+const { fail } = require('../utils/response')
 
 const auth = (req, res, next) => {
   const authHeader = req.headers.authorization
 
   if (!authHeader) {
-    return res.status(401).json({
-      code: 401,
-      message: '未登录，请先登录'
-    })
+    return fail(res, '未登录，请先登录', 401)
   }
 
   const token = authHeader.split(' ')[1]
 
   if (!token) {
-    return res.status(401).json({
-      code: 401,
-      message: 'token 格式错误'
-    })
+    return fail(res, '登录凭证格式错误', 401)
   }
 
   try {
@@ -25,10 +20,7 @@ const auth = (req, res, next) => {
     req.user = decoded
     next()
   } catch (err) {
-    return res.status(401).json({
-      code: 401,
-      message: 'token 无效或已过期，请重新登录'
-    })
+    return fail(res, '登录已失效，请重新登录', 401)
   }
 }
 

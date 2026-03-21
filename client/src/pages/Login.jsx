@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Form, Input, Button, Card, message } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
-import request from '../utils/request'
+import { loginUser, registerUser } from '../api/user'
 import { useAuth } from '../context/useAuth'
 
 function Login() {
@@ -16,15 +16,16 @@ function Login() {
 
     try {
       if (isRegister) {
-        await request.post('/api/user/register', values)
+        await registerUser(values)
         message.success('注册成功，请登录')
         setIsRegister(false)
-      } else {
-        const res = await request.post('/api/user/login', values)
-        login(res.data.token, res.data.userInfo.username)
-        message.success('登录成功')
-        navigate('/articles')
+        return
       }
+
+      const res = await loginUser(values)
+      login(res.data.token, res.data.userInfo)
+      message.success('登录成功')
+      navigate('/articles', { replace: true })
     } catch (err) {
       const msg = err.response?.data?.message || '操作失败'
       message.error(msg)
@@ -62,7 +63,7 @@ function Login() {
             <button
               type="button"
               className="text-blue-500 underline cursor-pointer border-none bg-transparent text-sm"
-              onClick={() => setIsRegister(!isRegister)}
+              onClick={() => setIsRegister((prev) => !prev)}
             >
               {isRegister ? '去登录' : '去注册'}
             </button>
