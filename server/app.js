@@ -6,6 +6,7 @@ const config = require('./config')
 const articleRouter = require('./routes/article')
 const userRouter = require('./routes/user')
 const uploadRouter = require('./routes/upload')
+const categoryRouter = require('./routes/category')
 const errorHandler = require('./middleware/errorHandler')
 
 const app = express()
@@ -21,6 +22,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 app.use(articleRouter)
 app.use(userRouter)
 app.use(uploadRouter)
+app.use(categoryRouter)
 
 // 错误处理
 app.use(errorHandler)

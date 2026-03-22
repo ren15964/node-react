@@ -3,12 +3,15 @@ const asyncHandler = require('../utils/asyncHandler')
 const articleService = require('../services/articleService')
 
 const getArticles = asyncHandler(async (req, res) => {
-  const articleList = await articleService.listArticles(req.query)
+  const articleList = await articleService.listArticles({
+    ...req.query,
+    userId: req.user?.id || null
+  })
   success(res, articleList)
 })
 
 const getArticleById = asyncHandler(async (req, res) => {
-  const article = await articleService.getArticleById(req.params.id)
+  const article = await articleService.getArticleById(req.params.id, req.user?.id || null)
   success(res, article)
 })
 

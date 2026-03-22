@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Form, Input, Button, Card, Space, message, Tag } from 'antd'
+import { Form, Input, Button, Card, Space, message, Tag, Radio, Select } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import request from '../utils/request'
 import { useAuth } from '../context/useAuth'
+import { fetchCategories } from '../api/category'
 
 function ArticleEdit() {
   const { id } = useParams()
@@ -11,11 +12,34 @@ function ArticleEdit() {
   const isEdit = !!id
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
+  const [categoryLoading, setCategoryLoading] = useState(false)
+  const [categories, setCategories] = useState([])
   const [articleMeta, setArticleMeta] = useState(null)
   const { userInfo } = useAuth()
 
   useEffect(() => {
+    const loadCategories = async () => {
+      setCategoryLoading(true)
+
+      try {
+        const res = await fetchCategories()
+        setCategories(res.data)
+      } catch (err) {
+        message.error(err.response?.data?.message || '加载分类失败')
+      } finally {
+        setCategoryLoading(false)
+      }
+    }
+
+    loadCategories()
+  }, [])
+
+  useEffect(() => {
     if (!isEdit) {
+      form.setFieldsValue({
+        status: 'draft',
+        categoryId: null
+      })
       return
     }
 
@@ -33,7 +57,9 @@ function ArticleEdit() {
         setArticleMeta(article)
         form.setFieldsValue({
           title: article.title,
-          content: article.content || ''
+          content: article.content || '',
+          status: article.status,
+          categoryId: article.category_id ?? null
         })
       } catch (err) {
         message.error(err.response?.data?.message || '加载文章失败')
@@ -48,12 +74,17 @@ function ArticleEdit() {
     setLoading(true)
 
     try {
+      const payload = {
+        ...values,
+        categoryId: values.categoryId || null
+      }
+
       if (isEdit) {
-        await request.put('/api/articles/' + id, values)
+        await request.put('/api/articles/' + id, payload)
         message.success('文章更新成功')
       } else {
-        await request.post('/api/articles', values)
-        message.success('文章发布成功')
+        await request.post('/api/articles', payload)
+        message.success(payload.status === 'published' ? '文章发布成功' : '草稿保存成功')
       }
 
       navigate('/articles')
@@ -64,6 +95,11 @@ function ArticleEdit() {
       setLoading(false)
     }
   }
+
+  const categoryOptions = categories.map((category) => ({
+    label: category.name,
+    value: category.id
+  }))
 
   return (
     <div>
@@ -79,20 +115,53 @@ function ArticleEdit() {
       <Card title={<span className="text-lg">{isEdit ? '编辑文章' : '发布文章'}</span>}>
         {articleMeta && (
           <Space className="mb-4" wrap>
+            <Tag color={articleMeta.status === 'published' ? 'green' : 'orange'}>
+              {articleMeta.status === 'published' ? '已发布' : '草稿'}
+            </Tag>
             <Tag color="blue">作者：{articleMeta.author_name || '未知作者'}</Tag>
+            <Tag color="geekblue">分类：{articleMeta.category_name || '未分类'}</Tag>
             <Tag color="default">
               创建时间：{new Date(articleMeta.created_at).toLocaleString('zh-CN')}
             </Tag>
           </Space>
         )}
 
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{ status: 'draft', categoryId: null }}
+        >
           <Form.Item
             label="文章标题"
             name="title"
             rules={[{ required: true, message: '请输入文章标题' }]}
           >
             <Input placeholder="请输入文章标题" />
+          </Form.Item>
+
+          <Form.Item label="文章分类" name="categoryId">
+            <Select
+              allowClear
+              placeholder="请选择文章分类"
+              options={categoryOptions}
+              loading={categoryLoading}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="发布状态"
+            name="status"
+            rules={[{ required: true, message: '请选择文章状态' }]}
+          >
+            <Radio.Group
+              options={[
+                { label: '草稿', value: 'draft' },
+                { label: '已发布', value: 'published' }
+              ]}
+              optionType="button"
+              buttonStyle="solid"
+            />
           </Form.Item>
 
           <Form.Item label="文章内容" name="content">
@@ -102,11 +171,9 @@ function ArticleEdit() {
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit" loading={loading}>
-                {isEdit ? '保存修改' : '发布文章'}
+                {isEdit ? '保存修改' : '保存文章'}
               </Button>
-              <Button onClick={() => navigate(isEdit ? '/articles/' + id : '/articles')}>
-                取消
-              </Button>
+              <Button onClick={() => navigate(isEdit ? '/articles/' + id : '/articles')}>取消</Button>
             </Space>
           </Form.Item>
         </Form>

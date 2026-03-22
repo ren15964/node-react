@@ -6,8 +6,12 @@ const articleSelectFields = `
   a.id,
   a.title,
   a.content,
+  a.status,
   a.author_id,
+  a.category_id,
   u.username AS author_name,
+  c.name AS category_name,
+  c.slug AS category_slug,
   a.created_at,
   a.updated_at,
   a.deleted_at
@@ -17,7 +21,7 @@ const buildKeywordPattern = (keyword) => `%${keyword}%`
 
 const getArticlePermissionSnapshot = async (id) => {
   const [rows] = await pool.query(
-    'SELECT id, author_id, deleted_at FROM articles WHERE id = ? LIMIT 1',
+    'SELECT id, author_id, status, deleted_at FROM articles WHERE id = ? LIMIT 1',
     [id]
   )
 
@@ -38,23 +42,84 @@ const assertArticleOwner = async (id, userId) => {
   return article
 }
 
-const listArticles = async ({ page, pageSize, keyword }) => {
+const ensureCategoryExists = async (categoryId) => {
+  if (!categoryId) {
+    return
+  }
+
+  const [rows] = await pool.query('SELECT id FROM categories WHERE id = ? LIMIT 1', [categoryId])
+
+  if (rows.length === 0) {
+    throw new AppError('所选分类不存在', 400)
+  }
+}
+
+const buildVisibilityClause = (userId, status) => {
+  if (!userId) {
+    if (status === 'draft') {
+      return {
+        sql: ' AND 1 = 0',
+        params: []
+      }
+    }
+
+    return {
+      sql: ' AND a.status = ?',
+      params: ['published']
+    }
+  }
+
+  if (status === 'draft') {
+    return {
+      sql: ' AND a.status = ? AND a.author_id = ?',
+      params: ['draft', userId]
+    }
+  }
+
+  if (status === 'published') {
+    return {
+      sql: ' AND a.status = ?',
+      params: ['published']
+    }
+  }
+
+  return {
+    sql: ' AND (a.status = ? OR a.author_id = ?)',
+    params: ['published', userId]
+  }
+}
+
+const listArticles = async ({ page, pageSize, keyword, status, categoryId, userId }) => {
   const pagination = normalizePaginationParams({ page, pageSize })
+  const visibility = buildVisibilityClause(userId, status)
   let sql = `
     SELECT ${articleSelectFields}
     FROM articles a
     LEFT JOIN users u ON u.id = a.author_id
+    LEFT JOIN categories c ON c.id = a.category_id
     WHERE a.deleted_at IS NULL
   `
   let countSql = 'SELECT COUNT(*) AS total FROM articles a WHERE a.deleted_at IS NULL'
   const params = []
   const countParams = []
 
+  sql += visibility.sql
+  countSql += visibility.sql
+  params.push(...visibility.params)
+  countParams.push(...visibility.params)
+
   if (keyword) {
     sql += ' AND a.title LIKE ?'
     countSql += ' AND a.title LIKE ?'
     params.push(buildKeywordPattern(keyword))
     countParams.push(buildKeywordPattern(keyword))
+  }
+
+  if (categoryId) {
+    sql += ' AND a.category_id = ?'
+    countSql += ' AND a.category_id = ?'
+    params.push(categoryId)
+    countParams.push(categoryId)
   }
 
   sql += ' ORDER BY a.created_at DESC LIMIT ? OFFSET ?'
@@ -75,12 +140,13 @@ const listArticles = async ({ page, pageSize, keyword }) => {
   }
 }
 
-const getArticleById = async (id) => {
+const getArticleById = async (id, userId) => {
   const [rows] = await pool.query(
     `
       SELECT ${articleSelectFields}
       FROM articles a
       LEFT JOIN users u ON u.id = a.author_id
+      LEFT JOIN categories c ON c.id = a.category_id
       WHERE a.id = ? AND a.deleted_at IS NULL
       LIMIT 1
     `,
@@ -91,13 +157,21 @@ const getArticleById = async (id) => {
     throw new AppError('文章不存在', 404)
   }
 
-  return rows[0]
+  const article = rows[0]
+
+  if (article.status === 'draft' && article.author_id !== userId) {
+    throw new AppError('文章不存在', 404)
+  }
+
+  return article
 }
 
-const createArticle = async ({ title, content, authorId }) => {
+const createArticle = async ({ title, content, status, categoryId, authorId }) => {
+  await ensureCategoryExists(categoryId)
+
   const [result] = await pool.query(
-    'INSERT INTO articles (title, content, author_id) VALUES (?, ?, ?)',
-    [title, content || null, authorId]
+    'INSERT INTO articles (title, content, status, author_id, category_id) VALUES (?, ?, ?, ?, ?)',
+    [title, content || null, status, authorId, categoryId || null]
   )
 
   return {
@@ -105,18 +179,19 @@ const createArticle = async ({ title, content, authorId }) => {
   }
 }
 
-const updateArticle = async (id, { title, content }, userId) => {
+const updateArticle = async (id, { title, content, status, categoryId }, userId) => {
   const article = await assertArticleOwner(id, userId)
 
   if (article.deleted_at) {
     throw new AppError('已删除的文章不能编辑', 400)
   }
 
-  await pool.query('UPDATE articles SET title = ?, content = ? WHERE id = ?', [
-    title,
-    content || null,
-    id
-  ])
+  await ensureCategoryExists(categoryId)
+
+  await pool.query(
+    'UPDATE articles SET title = ?, content = ?, status = ?, category_id = ? WHERE id = ?',
+    [title, content || null, status, categoryId || null, id]
+  )
 }
 
 const deleteArticle = async (id, userId) => {

@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const auth = require('../middleware/auth')
+const optionalAuth = require('../middleware/optionalAuth')
 const validate = require('../middleware/validate')
 const {
   createArticleSchema,
@@ -17,8 +18,8 @@ const {
   restoreArticle
 } = require('../controllers/articleController')
 
-router.get('/api/articles', validate(articleQuerySchema, 'query'), getArticles)
-router.get('/api/articles/:id', validate(articleIdParamSchema, 'params'), getArticleById)
+router.get('/api/articles', optionalAuth, validate(articleQuerySchema, 'query'), getArticles)
+router.get('/api/articles/:id', optionalAuth, validate(articleIdParamSchema, 'params'), getArticleById)
 router.post('/api/articles', auth, validate(createArticleSchema), createArticle)
 router.put(
   '/api/articles/:id',

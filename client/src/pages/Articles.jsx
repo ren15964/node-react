@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Table, Button, Space, Input, Popconfirm, message, Tag, Typography } from 'antd'
+import { Table, Button, Space, Input, Popconfirm, message, Tag, Typography, Select } from 'antd'
 import {
   PlusOutlined,
   SearchOutlined,
@@ -10,26 +10,56 @@ import {
 } from '@ant-design/icons'
 import request from '../utils/request'
 import { useAuth } from '../context/useAuth'
+import { fetchCategories } from '../api/category'
+
+const statusMap = {
+  draft: { color: 'orange', text: '草稿' },
+  published: { color: 'green', text: '已发布' }
+}
+
+const getDefaultStatus = (isLoggedIn) => (isLoggedIn ? 'all' : 'published')
 
 function Articles() {
   const [articles, setArticles] = useState([])
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
+  const [statusFilter, setStatusFilter] = useState('published')
+  const [categoryFilter, setCategoryFilter] = useState()
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0
   })
   const navigate = useNavigate()
-  const { isLoggedIn, userInfo } = useAuth()
+  const { isLoggedIn, isInitializing, userInfo } = useAuth()
 
-  const fetchArticles = async (page = 1, pageSize = 10, search = keyword) => {
+  const loadCategories = async () => {
+    try {
+      const res = await fetchCategories()
+      setCategories(res.data)
+    } catch (err) {
+      message.error(err.response?.data?.message || '获取分类列表失败')
+    }
+  }
+
+  const fetchArticles = async (
+    page = 1,
+    pageSize = 10,
+    search = keyword,
+    status = statusFilter,
+    categoryId = categoryFilter
+  ) => {
     setLoading(true)
 
     try {
-      const res = await request.get('/api/articles', {
-        params: { page, pageSize, keyword: search }
-      })
+      const params = { page, pageSize, keyword: search, status }
+
+      if (categoryId) {
+        params.categoryId = categoryId
+      }
+
+      const res = await request.get('/api/articles', { params })
 
       setArticles(res.data.list)
       setPagination({
@@ -48,23 +78,65 @@ function Articles() {
     try {
       await request.delete('/api/articles/' + id)
       message.success('删除成功')
-      fetchArticles(pagination.current, pagination.pageSize)
+      fetchArticles(pagination.current, pagination.pageSize, keyword, statusFilter, categoryFilter)
     } catch (err) {
       message.error(err.response?.data?.message || '删除失败')
     }
   }
 
   const handleSearch = () => {
-    fetchArticles(1, pagination.pageSize, keyword)
+    fetchArticles(1, pagination.pageSize, keyword, statusFilter, categoryFilter)
+  }
+
+  const handleStatusChange = (value) => {
+    setStatusFilter(value)
+    fetchArticles(1, pagination.pageSize, keyword, value, categoryFilter)
+  }
+
+  const handleCategoryChange = (value) => {
+    setCategoryFilter(value)
+    fetchArticles(1, pagination.pageSize, keyword, statusFilter, value)
   }
 
   const handleTableChange = (pag) => {
-    fetchArticles(pag.current, pag.pageSize)
+    fetchArticles(pag.current, pag.pageSize, keyword, statusFilter, categoryFilter)
   }
 
   useEffect(() => {
-    fetchArticles()
+    loadCategories()
   }, [])
+
+  useEffect(() => {
+    if (isInitializing) {
+      return
+    }
+
+    const defaultStatus = getDefaultStatus(isLoggedIn)
+
+    if (statusFilter !== defaultStatus) {
+      setStatusFilter(defaultStatus)
+      fetchArticles(1, pagination.pageSize, keyword, defaultStatus, categoryFilter)
+      return
+    }
+
+    fetchArticles(1, pagination.pageSize, keyword, defaultStatus, categoryFilter)
+  }, [isInitializing, isLoggedIn])
+
+  const statusOptions = isLoggedIn
+    ? [
+        { label: '全部状态', value: 'all' },
+        { label: '已发布', value: 'published' },
+        { label: '草稿', value: 'draft' }
+      ]
+    : [{ label: '已发布', value: 'published' }]
+
+  const categoryOptions = [
+    { label: '全部分类', value: '' },
+    ...categories.map((category) => ({
+      label: category.name,
+      value: category.id
+    }))
+  ]
 
   const columns = [
     {
@@ -80,13 +152,28 @@ function Articles() {
       )
     },
     {
+      title: '分类',
+      dataIndex: 'category_name',
+      width: 130,
+      render: (text) => <Tag color="geekblue">{text || '未分类'}</Tag>
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 110,
+      render: (status) => {
+        const currentStatus = statusMap[status] || { color: 'default', text: status || '未知' }
+        return <Tag color={currentStatus.color}>{currentStatus.text}</Tag>
+      }
+    },
+    {
       title: '作者',
       dataIndex: 'author_name',
       width: 170,
       render: (text, record) => (
         <Space size="small">
           <span>{text || '未知作者'}</span>
-          {userInfo?.id === record.author_id && <Tag color="green">我的文章</Tag>}
+          {userInfo?.id === record.author_id && <Tag color="blue">我的文章</Tag>}
         </Space>
       )
     },
@@ -94,7 +181,7 @@ function Articles() {
       title: '内容摘要',
       dataIndex: 'content',
       render: (text) => (
-        <span className="text-gray-500 text-sm">
+        <span className="text-sm text-gray-500">
           {text && text.length > 50 ? text.slice(0, 50) + '...' : text || '-'}
         </span>
       )
@@ -142,7 +229,7 @@ function Articles() {
                 </Popconfirm>
               </>
             ) : (
-              <span className="text-gray-400 text-sm">仅作者可编辑</span>
+              <span className="text-sm text-gray-400">仅作者可编辑</span>
             )}
           </Space>
         )
@@ -152,10 +239,10 @@ function Articles() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-800">文章列表</h2>
 
-        <Space>
+        <Space wrap>
           <Input
             placeholder="搜索文章标题"
             prefix={<SearchOutlined className="text-gray-400" />}
@@ -164,6 +251,18 @@ function Articles() {
             onPressEnter={handleSearch}
             allowClear
             className="w-60"
+          />
+          <Select
+            value={statusFilter}
+            options={statusOptions}
+            onChange={handleStatusChange}
+            className="w-32"
+          />
+          <Select
+            value={categoryFilter ?? ''}
+            options={categoryOptions}
+            onChange={handleCategoryChange}
+            className="w-36"
           />
           <Button onClick={handleSearch}>搜索</Button>
           {isLoggedIn && (
@@ -178,7 +277,7 @@ function Articles() {
         </Space>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm">
+      <div className="rounded-lg bg-white shadow-sm">
         <Table
           columns={columns}
           dataSource={articles}

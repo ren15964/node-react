@@ -5,6 +5,11 @@ import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons'
 import request from '../utils/request'
 import { useAuth } from '../context/useAuth'
 
+const statusMap = {
+  draft: { color: 'orange', text: '草稿' },
+  published: { color: 'green', text: '已发布' }
+}
+
 function ArticleDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -43,6 +48,7 @@ function ArticleDetail() {
   }
 
   const isOwner = userInfo?.id === article.author_id
+  const currentStatus = statusMap[article.status] || { color: 'default', text: article.status || '未知' }
 
   return (
     <div>
@@ -70,22 +76,23 @@ function ArticleDetail() {
         }
       >
         <Space className="mb-6" wrap>
+          <Tag color={currentStatus.color}>{currentStatus.text}</Tag>
+          <Tag color="geekblue">分类：{article.category_name || '未分类'}</Tag>
           <Tag color="blue">作者：{article.author_name || '未知作者'}</Tag>
-          <Tag color="default">
-            创建时间：{new Date(article.created_at).toLocaleString('zh-CN')}
-          </Tag>
+          <Tag color="default">创建时间：{new Date(article.created_at).toLocaleString('zh-CN')}</Tag>
           {isOwner && <Tag color="green">这是你的文章</Tag>}
         </Space>
 
         <Descriptions column={1} bordered size="small" className="mb-6">
           <Descriptions.Item label="文章 ID">{article.id}</Descriptions.Item>
           <Descriptions.Item label="作者 ID">{article.author_id}</Descriptions.Item>
+          <Descriptions.Item label="分类 Slug">{article.category_slug || '-'}</Descriptions.Item>
           <Descriptions.Item label="更新时间">
             {new Date(article.updated_at).toLocaleString('zh-CN')}
           </Descriptions.Item>
         </Descriptions>
 
-        <div className="rounded-lg bg-gray-50 p-5 leading-8 text-gray-700 whitespace-pre-wrap">
+        <div className="whitespace-pre-wrap rounded-lg bg-gray-50 p-5 leading-8 text-gray-700">
           {article.content || '这篇文章还没有填写正文内容。'}
         </div>
       </Card>

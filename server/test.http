@@ -1,6 +1,6 @@
 @baseUrl = http://localhost:3000
 
-### 登录，复制返回的 token 到下方变量
+### 登录后，把返回的 token 复制到下面的变量里
 POST {{baseUrl}}/api/user/login
 Content-Type: application/json
 
@@ -16,26 +16,55 @@ Content-Type: application/json
 GET {{baseUrl}}/api/user/profile
 Authorization: {{token}}
 
-### 创建文章，作者会自动取当前登录用户
+### 获取分类列表
+GET {{baseUrl}}/api/categories
+
+### 创建已发布文章，并指定分类
 POST {{baseUrl}}/api/articles
 Content-Type: application/json
 Authorization: {{token}}
 
 {
-  "title": "带作者归属的文章",
-  "content": "这篇文章会自动记录当前登录用户为作者。"
+  "title": "一篇带分类的已发布文章",
+  "content": "这篇文章会对所有用户可见，并且属于前端开发分类。",
+  "status": "published",
+  "categoryId": 2
 }
 
-### 查看文章列表，确认返回了 author_id 和 author_name
+### 创建草稿文章，并指定分类
+POST {{baseUrl}}/api/articles
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+  "title": "一篇草稿文章",
+  "content": "这篇文章只有作者本人可见，属于全栈实战分类。",
+  "status": "draft",
+  "categoryId": 3
+}
+
+### 游客查看文章列表
 GET {{baseUrl}}/api/articles
+
+### 登录后查看文章列表，作者可以看到自己的草稿
+GET {{baseUrl}}/api/articles?status=all
+Authorization: {{token}}
+
+### 按分类筛选文章列表
+GET {{baseUrl}}/api/articles?status=all&categoryId=2
+Authorization: {{token}}
 
 ### 查看文章详情
 GET {{baseUrl}}/api/articles/1
 
-### 删除文章，只有作者本人可以删除
-DELETE {{baseUrl}}/api/articles/1
+### 更新文章状态和分类
+PUT {{baseUrl}}/api/articles/1
+Content-Type: application/json
 Authorization: {{token}}
 
-### 恢复文章，只有作者本人可以恢复
-PATCH {{baseUrl}}/api/articles/1/restore
-Authorization: {{token}}
+{
+  "title": "更新后的文章标题",
+  "content": "更新后的文章内容",
+  "status": "published",
+  "categoryId": 1
+}
