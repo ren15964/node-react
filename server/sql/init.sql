@@ -27,6 +27,19 @@ CREATE TABLE IF NOT EXISTS `categories` (
   KEY `idx_categories_sort_order` (`sort_order`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `tags` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(50) NOT NULL,
+  `slug` VARCHAR(50) NOT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_tags_name` (`name`),
+  UNIQUE KEY `uk_tags_slug` (`slug`),
+  KEY `idx_tags_sort_order` (`sort_order`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `articles` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(100) NOT NULL,
@@ -46,6 +59,18 @@ CREATE TABLE IF NOT EXISTS `articles` (
     FOREIGN KEY (`author_id`) REFERENCES `users` (`id`),
   CONSTRAINT `fk_articles_category`
     FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `article_tags` (
+  `article_id` INT UNSIGNED NOT NULL,
+  `tag_id` INT UNSIGNED NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`article_id`, `tag_id`),
+  KEY `idx_article_tags_tag_id` (`tag_id`),
+  CONSTRAINT `fk_article_tags_article`
+    FOREIGN KEY (`article_id`) REFERENCES `articles` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_article_tags_tag`
+    FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO `users` (`username`, `password`)
@@ -72,21 +97,34 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `categories` WHERE `slug` = 'fullstack'
 );
 
+INSERT INTO `tags` (`name`, `slug`, `sort_order`)
+SELECT 'Node.js', 'nodejs', 10
+WHERE NOT EXISTS (
+  SELECT 1 FROM `tags` WHERE `slug` = 'nodejs'
+);
+
+INSERT INTO `tags` (`name`, `slug`, `sort_order`)
+SELECT 'React', 'react', 20
+WHERE NOT EXISTS (
+  SELECT 1 FROM `tags` WHERE `slug` = 'react'
+);
+
+INSERT INTO `tags` (`name`, `slug`, `sort_order`)
+SELECT 'MySQL', 'mysql', 30
+WHERE NOT EXISTS (
+  SELECT 1 FROM `tags` WHERE `slug` = 'mysql'
+);
+
+INSERT INTO `tags` (`name`, `slug`, `sort_order`)
+SELECT '工程化', 'engineering', 40
+WHERE NOT EXISTS (
+  SELECT 1 FROM `tags` WHERE `slug` = 'engineering'
+);
+
 DELIMITER //
 
-CREATE PROCEDURE `ensure_article_schema`()
+CREATE PROCEDURE `ensure_content_schema`()
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_schema = DATABASE()
-      AND table_name = 'articles'
-      AND column_name = 'author_id'
-  ) THEN
-    ALTER TABLE `articles`
-      ADD COLUMN `author_id` INT UNSIGNED NULL AFTER `status`;
-  END IF;
-
   IF NOT EXISTS (
     SELECT 1
     FROM information_schema.columns
@@ -96,6 +134,17 @@ BEGIN
   ) THEN
     ALTER TABLE `articles`
       ADD COLUMN `status` ENUM('draft', 'published') NOT NULL DEFAULT 'draft' AFTER `content`;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = 'articles'
+      AND column_name = 'author_id'
+  ) THEN
+    ALTER TABLE `articles`
+      ADD COLUMN `author_id` INT UNSIGNED NULL AFTER `status`;
   END IF;
 
   IF NOT EXISTS (
@@ -195,8 +244,8 @@ BEGIN
   END IF;
 END //
 
-CALL `ensure_article_schema`() //
-DROP PROCEDURE `ensure_article_schema` //
+CALL `ensure_content_schema`() //
+DROP PROCEDURE `ensure_content_schema` //
 
 DELIMITER ;
 
@@ -231,7 +280,7 @@ WHERE u.username = 'admin'
 INSERT INTO `articles` (`title`, `content`, `status`, `author_id`, `category_id`)
 SELECT
   '全栈开发备忘',
-  '这是一篇全栈测试文章，用来验证搜索、草稿和分类能力。',
+  '这是一篇全栈测试文章，用来验证搜索、草稿、分类和标签能力。',
   'draft',
   u.id,
   c.id
@@ -264,3 +313,21 @@ UPDATE `articles` a
 JOIN `categories` c ON c.slug = 'fullstack'
 SET a.`category_id` = c.`id`
 WHERE a.`title` = '全栈开发备忘';
+
+INSERT IGNORE INTO `article_tags` (`article_id`, `tag_id`)
+SELECT a.id, t.id
+FROM `articles` a
+JOIN `tags` t ON t.slug IN ('nodejs', 'mysql')
+WHERE a.title = 'Node.js 入门';
+
+INSERT IGNORE INTO `article_tags` (`article_id`, `tag_id`)
+SELECT a.id, t.id
+FROM `articles` a
+JOIN `tags` t ON t.slug IN ('react', 'engineering')
+WHERE a.title = 'React 项目记录';
+
+INSERT IGNORE INTO `article_tags` (`article_id`, `tag_id`)
+SELECT a.id, t.id
+FROM `articles` a
+JOIN `tags` t ON t.slug IN ('nodejs', 'react', 'engineering')
+WHERE a.title = '全栈开发备忘';

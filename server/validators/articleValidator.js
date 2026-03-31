@@ -10,18 +10,34 @@ const categoryIdSchema = Joi.number().integer().positive().allow(null).messages(
   'number.positive': '分类 ID 必须大于 0'
 })
 
+const tagIdsSchema = Joi.array()
+  .items(
+    Joi.number().integer().positive().messages({
+      'number.base': '标签 ID 必须是数字',
+      'number.integer': '标签 ID 必须是整数',
+      'number.positive': '标签 ID 必须大于 0'
+    })
+  )
+  .max(10)
+  .default([])
+  .messages({
+    'array.base': '标签 ID 必须是数组',
+    'array.max': '一篇文章最多选择 10 个标签'
+  })
+
 const articleBodySchema = {
   title: Joi.string().trim().min(1).max(100).required().messages({
     'string.empty': '文章标题不能为空',
     'string.min': '文章标题至少 1 个字符',
-    'string.max': '文章标题最大 100 个字符',
+    'string.max': '文章标题最多 100 个字符',
     'any.required': '文章标题不能为空'
   }),
   content: Joi.string().max(50000).allow('', null).messages({
-    'string.max': '文章内容最大 50000 个字符'
+    'string.max': '文章内容最多 50000 个字符'
   }),
   status: articleStatusSchema.default('draft'),
-  categoryId: categoryIdSchema.default(null)
+  categoryId: categoryIdSchema.default(null),
+  tagIds: tagIdsSchema
 }
 
 const createArticleSchema = Joi.object(articleBodySchema)
@@ -38,7 +54,7 @@ const articleQuerySchema = Joi.object({
     'number.max': 'pageSize 最大为 100'
   }),
   keyword: Joi.string().trim().max(50).allow('', null).messages({
-    'string.max': '搜索关键字最大 50 个字符'
+    'string.max': '搜索关键字最多 50 个字符'
   }),
   status: Joi.string().valid('all', 'draft', 'published').default('all').messages({
     'any.only': '筛选状态只能是 all、draft 或 published'
@@ -47,6 +63,11 @@ const articleQuerySchema = Joi.object({
     'number.base': '分类筛选必须是数字',
     'number.integer': '分类筛选必须是整数',
     'number.positive': '分类筛选必须大于 0'
+  }),
+  tagId: Joi.number().integer().positive().messages({
+    'number.base': '标签筛选必须是数字',
+    'number.integer': '标签筛选必须是整数',
+    'number.positive': '标签筛选必须大于 0'
   })
 })
 

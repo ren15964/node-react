@@ -5,6 +5,7 @@ import { ArrowLeftOutlined } from '@ant-design/icons'
 import request from '../utils/request'
 import { useAuth } from '../context/useAuth'
 import { fetchCategories } from '../api/category'
+import { fetchTags } from '../api/tag'
 
 function ArticleEdit() {
   const { id } = useParams()
@@ -12,33 +13,36 @@ function ArticleEdit() {
   const isEdit = !!id
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
-  const [categoryLoading, setCategoryLoading] = useState(false)
+  const [optionsLoading, setOptionsLoading] = useState(false)
   const [categories, setCategories] = useState([])
+  const [tags, setTags] = useState([])
   const [articleMeta, setArticleMeta] = useState(null)
   const { userInfo } = useAuth()
 
   useEffect(() => {
-    const loadCategories = async () => {
-      setCategoryLoading(true)
+    const loadOptions = async () => {
+      setOptionsLoading(true)
 
       try {
-        const res = await fetchCategories()
-        setCategories(res.data)
+        const [categoryRes, tagRes] = await Promise.all([fetchCategories(), fetchTags()])
+        setCategories(categoryRes.data)
+        setTags(tagRes.data)
       } catch (err) {
-        message.error(err.response?.data?.message || '加载分类失败')
+        message.error(err.response?.data?.message || '加载文章配置失败')
       } finally {
-        setCategoryLoading(false)
+        setOptionsLoading(false)
       }
     }
 
-    loadCategories()
+    loadOptions()
   }, [])
 
   useEffect(() => {
     if (!isEdit) {
       form.setFieldsValue({
         status: 'draft',
-        categoryId: null
+        categoryId: null,
+        tagIds: []
       })
       return
     }
@@ -59,7 +63,8 @@ function ArticleEdit() {
           title: article.title,
           content: article.content || '',
           status: article.status,
-          categoryId: article.category_id ?? null
+          categoryId: article.category_id ?? null,
+          tagIds: article.tags?.map((tag) => tag.id) || []
         })
       } catch (err) {
         message.error(err.response?.data?.message || '加载文章失败')
@@ -76,7 +81,8 @@ function ArticleEdit() {
     try {
       const payload = {
         ...values,
-        categoryId: values.categoryId || null
+        categoryId: values.categoryId || null,
+        tagIds: values.tagIds || []
       }
 
       if (isEdit) {
@@ -101,6 +107,11 @@ function ArticleEdit() {
     value: category.id
   }))
 
+  const tagOptions = tags.map((tag) => ({
+    label: tag.name,
+    value: tag.id
+  }))
+
   return (
     <div>
       <Button
@@ -120,6 +131,11 @@ function ArticleEdit() {
             </Tag>
             <Tag color="blue">作者：{articleMeta.author_name || '未知作者'}</Tag>
             <Tag color="geekblue">分类：{articleMeta.category_name || '未分类'}</Tag>
+            <Space size={[4, 4]} wrap>
+              {(articleMeta.tags || []).map((tag) => (
+                <Tag key={tag.id}>{tag.name}</Tag>
+              ))}
+            </Space>
             <Tag color="default">
               创建时间：{new Date(articleMeta.created_at).toLocaleString('zh-CN')}
             </Tag>
@@ -130,7 +146,7 @@ function ArticleEdit() {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          initialValues={{ status: 'draft', categoryId: null }}
+          initialValues={{ status: 'draft', categoryId: null, tagIds: [] }}
         >
           <Form.Item
             label="文章标题"
@@ -145,7 +161,18 @@ function ArticleEdit() {
               allowClear
               placeholder="请选择文章分类"
               options={categoryOptions}
-              loading={categoryLoading}
+              loading={optionsLoading}
+            />
+          </Form.Item>
+
+          <Form.Item label="文章标签" name="tagIds">
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="请选择文章标签"
+              options={tagOptions}
+              loading={optionsLoading}
+              maxCount={10}
             />
           </Form.Item>
 

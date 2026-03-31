@@ -19,28 +19,33 @@ Authorization: {{token}}
 ### 获取分类列表
 GET {{baseUrl}}/api/categories
 
-### 创建已发布文章，并指定分类
+### 获取标签列表
+GET {{baseUrl}}/api/tags
+
+### 创建已发布文章，并指定分类和标签
 POST {{baseUrl}}/api/articles
 Content-Type: application/json
 Authorization: {{token}}
 
 {
-  "title": "一篇带分类的已发布文章",
-  "content": "这篇文章会对所有用户可见，并且属于前端开发分类。",
+  "title": "一篇带标签的已发布文章",
+  "content": "这篇文章会对所有用户可见，并且带有分类和标签。",
   "status": "published",
-  "categoryId": 2
+  "categoryId": 2,
+  "tagIds": [2, 4]
 }
 
-### 创建草稿文章，并指定分类
+### 创建草稿文章，并指定分类和标签
 POST {{baseUrl}}/api/articles
 Content-Type: application/json
 Authorization: {{token}}
 
 {
-  "title": "一篇草稿文章",
-  "content": "这篇文章只有作者本人可见，属于全栈实战分类。",
+  "title": "一篇带标签的草稿文章",
+  "content": "这篇文章只有作者本人可见，适合测试标签和草稿组合。",
   "status": "draft",
-  "categoryId": 3
+  "categoryId": 3,
+  "tagIds": [1, 2, 4]
 }
 
 ### 游客查看文章列表
@@ -54,10 +59,14 @@ Authorization: {{token}}
 GET {{baseUrl}}/api/articles?status=all&categoryId=2
 Authorization: {{token}}
 
+### 按标签筛选文章列表
+GET {{baseUrl}}/api/articles?status=all&tagId=2
+Authorization: {{token}}
+
 ### 查看文章详情
 GET {{baseUrl}}/api/articles/1
 
-### 更新文章状态和分类
+### 更新文章状态、分类和标签
 PUT {{baseUrl}}/api/articles/1
 Content-Type: application/json
 Authorization: {{token}}
@@ -66,5 +75,6 @@ Authorization: {{token}}
   "title": "更新后的文章标题",
   "content": "更新后的文章内容",
   "status": "published",
-  "categoryId": 1
+  "categoryId": 1,
+  "tagIds": [1, 3]
 }

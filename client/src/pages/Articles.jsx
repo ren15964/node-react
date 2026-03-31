@@ -11,6 +11,7 @@ import {
 import request from '../utils/request'
 import { useAuth } from '../context/useAuth'
 import { fetchCategories } from '../api/category'
+import { fetchTags } from '../api/tag'
 
 const statusMap = {
   draft: { color: 'orange', text: '草稿' },
@@ -22,10 +23,12 @@ const getDefaultStatus = (isLoggedIn) => (isLoggedIn ? 'all' : 'published')
 function Articles() {
   const [articles, setArticles] = useState([])
   const [categories, setCategories] = useState([])
+  const [tags, setTags] = useState([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('published')
   const [categoryFilter, setCategoryFilter] = useState()
+  const [tagFilter, setTagFilter] = useState()
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -34,12 +37,13 @@ function Articles() {
   const navigate = useNavigate()
   const { isLoggedIn, isInitializing, userInfo } = useAuth()
 
-  const loadCategories = async () => {
+  const loadFilterOptions = async () => {
     try {
-      const res = await fetchCategories()
-      setCategories(res.data)
+      const [categoryRes, tagRes] = await Promise.all([fetchCategories(), fetchTags()])
+      setCategories(categoryRes.data)
+      setTags(tagRes.data)
     } catch (err) {
-      message.error(err.response?.data?.message || '获取分类列表失败')
+      message.error(err.response?.data?.message || '加载筛选项失败')
     }
   }
 
@@ -48,7 +52,8 @@ function Articles() {
     pageSize = 10,
     search = keyword,
     status = statusFilter,
-    categoryId = categoryFilter
+    categoryId = categoryFilter,
+    tagId = tagFilter
   ) => {
     setLoading(true)
 
@@ -57,6 +62,10 @@ function Articles() {
 
       if (categoryId) {
         params.categoryId = categoryId
+      }
+
+      if (tagId) {
+        params.tagId = tagId
       }
 
       const res = await request.get('/api/articles', { params })
@@ -78,32 +87,44 @@ function Articles() {
     try {
       await request.delete('/api/articles/' + id)
       message.success('删除成功')
-      fetchArticles(pagination.current, pagination.pageSize, keyword, statusFilter, categoryFilter)
+      fetchArticles(
+        pagination.current,
+        pagination.pageSize,
+        keyword,
+        statusFilter,
+        categoryFilter,
+        tagFilter
+      )
     } catch (err) {
       message.error(err.response?.data?.message || '删除失败')
     }
   }
 
   const handleSearch = () => {
-    fetchArticles(1, pagination.pageSize, keyword, statusFilter, categoryFilter)
+    fetchArticles(1, pagination.pageSize, keyword, statusFilter, categoryFilter, tagFilter)
   }
 
   const handleStatusChange = (value) => {
     setStatusFilter(value)
-    fetchArticles(1, pagination.pageSize, keyword, value, categoryFilter)
+    fetchArticles(1, pagination.pageSize, keyword, value, categoryFilter, tagFilter)
   }
 
   const handleCategoryChange = (value) => {
     setCategoryFilter(value)
-    fetchArticles(1, pagination.pageSize, keyword, statusFilter, value)
+    fetchArticles(1, pagination.pageSize, keyword, statusFilter, value, tagFilter)
+  }
+
+  const handleTagChange = (value) => {
+    setTagFilter(value)
+    fetchArticles(1, pagination.pageSize, keyword, statusFilter, categoryFilter, value)
   }
 
   const handleTableChange = (pag) => {
-    fetchArticles(pag.current, pag.pageSize, keyword, statusFilter, categoryFilter)
+    fetchArticles(pag.current, pag.pageSize, keyword, statusFilter, categoryFilter, tagFilter)
   }
 
   useEffect(() => {
-    loadCategories()
+    loadFilterOptions()
   }, [])
 
   useEffect(() => {
@@ -115,11 +136,11 @@ function Articles() {
 
     if (statusFilter !== defaultStatus) {
       setStatusFilter(defaultStatus)
-      fetchArticles(1, pagination.pageSize, keyword, defaultStatus, categoryFilter)
+      fetchArticles(1, pagination.pageSize, keyword, defaultStatus, categoryFilter, tagFilter)
       return
     }
 
-    fetchArticles(1, pagination.pageSize, keyword, defaultStatus, categoryFilter)
+    fetchArticles(1, pagination.pageSize, keyword, defaultStatus, categoryFilter, tagFilter)
   }, [isInitializing, isLoggedIn])
 
   const statusOptions = isLoggedIn
@@ -135,6 +156,14 @@ function Articles() {
     ...categories.map((category) => ({
       label: category.name,
       value: category.id
+    }))
+  ]
+
+  const tagOptions = [
+    { label: '全部标签', value: '' },
+    ...tags.map((tag) => ({
+      label: tag.name,
+      value: tag.id
     }))
   ]
 
@@ -156,6 +185,21 @@ function Articles() {
       dataIndex: 'category_name',
       width: 130,
       render: (text) => <Tag color="geekblue">{text || '未分类'}</Tag>
+    },
+    {
+      title: '标签',
+      dataIndex: 'tags',
+      width: 220,
+      render: (articleTags = []) =>
+        articleTags.length > 0 ? (
+          <Space size={[4, 4]} wrap>
+            {articleTags.map((tag) => (
+              <Tag key={tag.id}>{tag.name}</Tag>
+            ))}
+          </Space>
+        ) : (
+          <span className="text-sm text-gray-400">暂无标签</span>
+        )
     },
     {
       title: '状态',
@@ -262,6 +306,12 @@ function Articles() {
             value={categoryFilter ?? ''}
             options={categoryOptions}
             onChange={handleCategoryChange}
+            className="w-36"
+          />
+          <Select
+            value={tagFilter ?? ''}
+            options={tagOptions}
+            onChange={handleTagChange}
             className="w-36"
           />
           <Button onClick={handleSearch}>搜索</Button>

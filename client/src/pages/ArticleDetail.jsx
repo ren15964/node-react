@@ -83,6 +83,17 @@ function ArticleDetail() {
           {isOwner && <Tag color="green">这是你的文章</Tag>}
         </Space>
 
+        <div className="mb-6">
+          <div className="mb-2 text-sm font-medium text-gray-600">文章标签</div>
+          <Space size={[6, 6]} wrap>
+            {(article.tags || []).length > 0 ? (
+              article.tags.map((tag) => <Tag key={tag.id}>{tag.name}</Tag>)
+            ) : (
+              <span className="text-sm text-gray-400">暂无标签</span>
+            )}
+          </Space>
+        </div>
+
         <Descriptions column={1} bordered size="small" className="mb-6">
           <Descriptions.Item label="文章 ID">{article.id}</Descriptions.Item>
           <Descriptions.Item label="作者 ID">{article.author_id}</Descriptions.Item>
