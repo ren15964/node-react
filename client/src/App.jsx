@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { Button, Space } from 'antd'
 import { LogoutOutlined, EditOutlined } from '@ant-design/icons'
+import { useDispatch } from 'react-redux'
 import Login from './pages/Login'
 import Articles from './pages/Articles'
 import ArticleDetail from './pages/ArticleDetail'
@@ -8,6 +10,7 @@ import ArticleEdit from './pages/ArticleEdit'
 import Upload from './pages/Upload'
 import PrivateRoute from './components/PrivateRoute'
 import { useAuth } from './context/useAuth'
+import { initializeAuth } from './store/authSlice'
 
 function NavBar() {
   const { isLoggedIn, username, logout } = useAuth()
@@ -56,6 +59,12 @@ function NavBar() {
 }
 
 function App() {
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    dispatch(initializeAuth())
+  }, [dispatch])
+
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-gray-50">

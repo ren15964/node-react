@@ -4,6 +4,10 @@ CREATE DATABASE IF NOT EXISTS `fullstack_blog`
 
 USE `fullstack_blog`;
 
+-- 新库初始化脚本
+-- 适用场景：第一次搭建数据库，当前库里还没有完整业务表结构
+-- 如果你已经有旧版 `articles` 表，想升级到当前结构，请执行 `migrate_article_schema.sql`
+
 CREATE TABLE IF NOT EXISTS `users` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(20) NOT NULL,
@@ -97,6 +101,7 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `categories` WHERE `slug` = 'fullstack'
 );
 
+<<<<<<< HEAD
 INSERT INTO `tags` (`name`, `slug`, `sort_order`)
 SELECT 'Node.js', 'nodejs', 10
 WHERE NOT EXISTS (
@@ -249,6 +254,8 @@ DROP PROCEDURE `ensure_content_schema` //
 
 DELIMITER ;
 
+=======
+>>>>>>> d2dc676701a96e2b1e56c010071abe02a1f5a001
 INSERT INTO `articles` (`title`, `content`, `status`, `author_id`, `category_id`)
 SELECT
   'Node.js 入门',
