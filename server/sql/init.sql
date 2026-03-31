@@ -4,6 +4,10 @@ CREATE DATABASE IF NOT EXISTS `fullstack_blog`
 
 USE `fullstack_blog`;
 
+-- 新库初始化脚本
+-- 适用场景：第一次搭建数据库，当前库里还没有完整业务表结构
+-- 如果你已经有旧版 `articles` 表，想升级到当前结构，请执行 `migrate_article_schema.sql`
+
 CREATE TABLE IF NOT EXISTS `users` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(20) NOT NULL,
@@ -71,134 +75,6 @@ SELECT '全栈实战', 'fullstack', 30
 WHERE NOT EXISTS (
   SELECT 1 FROM `categories` WHERE `slug` = 'fullstack'
 );
-
-DELIMITER //
-
-CREATE PROCEDURE `ensure_article_schema`()
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_schema = DATABASE()
-      AND table_name = 'articles'
-      AND column_name = 'author_id'
-  ) THEN
-    ALTER TABLE `articles`
-      ADD COLUMN `author_id` INT UNSIGNED NULL AFTER `status`;
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_schema = DATABASE()
-      AND table_name = 'articles'
-      AND column_name = 'status'
-  ) THEN
-    ALTER TABLE `articles`
-      ADD COLUMN `status` ENUM('draft', 'published') NOT NULL DEFAULT 'draft' AFTER `content`;
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_schema = DATABASE()
-      AND table_name = 'articles'
-      AND column_name = 'category_id'
-  ) THEN
-    ALTER TABLE `articles`
-      ADD COLUMN `category_id` INT UNSIGNED NULL DEFAULT NULL AFTER `author_id`;
-  END IF;
-
-  UPDATE `articles`
-  SET `author_id` = (
-    SELECT `id` FROM `users` WHERE `username` = 'admin' LIMIT 1
-  )
-  WHERE `author_id` IS NULL;
-
-  UPDATE `articles`
-  SET `status` = 'published'
-  WHERE `status` IS NULL OR `status` = '';
-
-  ALTER TABLE `articles`
-    MODIFY COLUMN `author_id` INT UNSIGNED NOT NULL,
-    MODIFY COLUMN `status` ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
-    MODIFY COLUMN `category_id` INT UNSIGNED NULL DEFAULT NULL;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.statistics
-    WHERE table_schema = DATABASE()
-      AND table_name = 'articles'
-      AND index_name = 'idx_articles_author_id'
-  ) THEN
-    ALTER TABLE `articles`
-      ADD KEY `idx_articles_author_id` (`author_id`);
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.statistics
-    WHERE table_schema = DATABASE()
-      AND table_name = 'articles'
-      AND index_name = 'idx_articles_status_created'
-  ) THEN
-    ALTER TABLE `articles`
-      ADD KEY `idx_articles_status_created` (`status`, `created_at`);
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.statistics
-    WHERE table_schema = DATABASE()
-      AND table_name = 'articles'
-      AND index_name = 'idx_articles_deleted_created'
-  ) THEN
-    ALTER TABLE `articles`
-      ADD KEY `idx_articles_deleted_created` (`deleted_at`, `created_at`);
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.statistics
-    WHERE table_schema = DATABASE()
-      AND table_name = 'articles'
-      AND index_name = 'idx_articles_category_id'
-  ) THEN
-    ALTER TABLE `articles`
-      ADD KEY `idx_articles_category_id` (`category_id`);
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.key_column_usage
-    WHERE table_schema = DATABASE()
-      AND table_name = 'articles'
-      AND column_name = 'author_id'
-      AND referenced_table_name = 'users'
-  ) THEN
-    ALTER TABLE `articles`
-      ADD CONSTRAINT `fk_articles_author`
-        FOREIGN KEY (`author_id`) REFERENCES `users` (`id`);
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.key_column_usage
-    WHERE table_schema = DATABASE()
-      AND table_name = 'articles'
-      AND column_name = 'category_id'
-      AND referenced_table_name = 'categories'
-  ) THEN
-    ALTER TABLE `articles`
-      ADD CONSTRAINT `fk_articles_category`
-        FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`);
-  END IF;
-END //
-
-CALL `ensure_article_schema`() //
-DROP PROCEDURE `ensure_article_schema` //
-
-DELIMITER ;
 
 INSERT INTO `articles` (`title`, `content`, `status`, `author_id`, `category_id`)
 SELECT

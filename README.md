@@ -50,6 +50,25 @@ npm install --prefix client
 - `JWT_SECRET`：JWT 签名密钥
 - `JWT_EXPIRES_IN`：JWT 过期时间
 
+## 数据库初始化
+
+第一次创建数据库时，执行：
+
+```bash
+mysql -u root -p < server/sql/init.sql
+```
+
+如果你本地已经有旧版数据库，只是要把文章表升级到当前结构，执行：
+
+```bash
+mysql -u root -p fullstack_blog < server/sql/migrate_article_schema.sql
+```
+
+两份脚本的区别：
+
+- `server/sql/init.sql`：给新环境使用，从 0 创建完整表结构和初始化数据
+- `server/sql/migrate_article_schema.sql`：给旧环境升级使用，补齐文章模块新增字段、索引、外键和分类数据
+
 ## 上传目录
 
 - 上传文件会保存到 `server/uploads/`

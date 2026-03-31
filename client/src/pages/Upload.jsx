@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Upload as AntUpload, Card, message, Image } from 'antd'
 import { InboxOutlined } from '@ant-design/icons'
+import { useAuth } from '../context/useAuth'
 
 const BASE_URL = 'http://localhost:3000'
 
 function Upload() {
   const [fileList, setFileList] = useState([])
-
-  const token = localStorage.getItem('token')
+  const { token } = useAuth()
 
   const uploadProps = {
     name: 'file',
